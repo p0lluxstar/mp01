@@ -32,8 +32,39 @@ const callback = () => {
         })
     }
 
+    function checkInputValue(boxesInput, selectorBtn){ // функция которая проверяет все поля формы на заполняемость
+        const valueInput = document.querySelectorAll(boxesInput);
+        const btnInput = document.querySelector(selectorBtn);
+
+        btnInput.addEventListener('click', function(e){
+            if(e.target){
+                e.preventDefault();
+            }
+
+            for(let i = 0; i < valueInput.length; i++){
+                if(valueInput[i].value == ''){
+                    valueInput[i].classList.add('error');
+                } else {
+                    valueInput[i].classList.remove('error');
+                }
+            } 
+
+        })
+    };
+
+    function showModalByTime(selector, time){
+        setTimeout(function(){
+            document.querySelector(selector).style.display = 'block';
+        }, time);
+
+    }
+
+    
+
     bindModal('.btn_header', '.popup', '.popup_close');
     bindModal('.link_feedback', '.popup', '.popup_close');
+    /* showModalByTime('.popup', 2000); */
+    checkInputValue('.form_input', '.form_button')
 
 };
 

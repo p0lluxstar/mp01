@@ -983,8 +983,38 @@ var callback = function callback() {
     });
   }
 
+  function checkInputValue(boxesInput, selectorBtn) {
+    // функция которая проверяет все поля формы на заполняемость
+    var valueInput = document.querySelectorAll(boxesInput);
+    var btnInput = document.querySelector(selectorBtn);
+    btnInput.addEventListener('click', function (e) {
+      if (e.target) {
+        e.preventDefault();
+      }
+
+      for (var i = 0; i < valueInput.length; i++) {
+        if (valueInput[i].value == '') {
+          valueInput[i].classList.add('error');
+        } else {
+          valueInput[i].classList.remove('error');
+        }
+      }
+    });
+  }
+
+  ;
+
+  function showModalByTime(selector, time) {
+    setTimeout(function () {
+      document.querySelector(selector).style.display = 'block';
+    }, time);
+  }
+
   bindModal('.btn_header', '.popup', '.popup_close');
   bindModal('.link_feedback', '.popup', '.popup_close');
+  /* showModalByTime('.popup', 2000); */
+
+  checkInputValue('.form_input', '.form_button');
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (callback);

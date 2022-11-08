@@ -1,0 +1,7 @@
+npm uninstall -g gulp
+npm install -g gulp
+
+npm install gulp-cli -g
+npm rm gulp-cli -g
+
+gulp -v

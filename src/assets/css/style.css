@@ -3,6 +3,10 @@
   padding: 0;
 }
 
+.main{
+    padding: 15px 0;
+}
+
 html, body {
 	height: 100%;
 }
@@ -134,4 +138,29 @@ form p{
 
 .error:focus{
     box-shadow: 1px 1px 0 red inset, -1px -1px 0 red inset;
+}
+
+.box_tabs{
+    margin: 5px;
+	padding: 10px 20px;
+	display: inline-block;
+	border: 1px solid #000;
+	box-sizing: border-box;
+    width: 20%;
+}
+
+.content_tabs{
+    margin: 15px 30px;
+    font-size: 3em;
+}
+
+.img_city{
+    float: left;
+}
+
+.text_city{
+    float: left;
+    line-height: 1.5em;
+    font-weight: bold;
+    padding-left: 15px;
 }

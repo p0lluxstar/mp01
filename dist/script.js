@@ -14874,11 +14874,14 @@ module.exports = g;
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _slider__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./slider */ "./src/js/slider.js");
 /* harmony import */ var _modules_callback__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./modules/callback */ "./src/js/modules/callback.js");
+/* harmony import */ var _modules_tabs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./modules/tabs */ "./src/js/modules/tabs.js");
+
 
 
 window.addEventListener('DOMContentLoaded', function () {
   //этот обработчик отвечает за то, что скрипты начинают выполнятся когда DOM дерево будет готова
   Object(_modules_callback__WEBPACK_IMPORTED_MODULE_1__["default"])();
+  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs', '.box_tabs', '.content_tabs');
 });
 
 /***/ }),
@@ -14963,6 +14966,42 @@ var callback = function callback() {
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (callback);
+
+/***/ }),
+
+/***/ "./src/js/modules/tabs.js":
+/*!********************************!*\
+  !*** ./src/js/modules/tabs.js ***!
+  \********************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! core-js/modules/web.dom-collections.for-each */ "./node_modules/core-js/modules/web.dom-collections.for-each.js");
+/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__);
+
+
+var tabs = function tabs(allSelector, boxSelector, contentSelector, activeSelector) {
+  var all = document.querySelector(allSelector);
+  var box = document.querySelectorAll(boxSelector);
+  var content = document.querySelectorAll(contentSelector);
+
+  function hideTabContent() {
+    content.forEach(function (item) {
+      item.style.display = none;
+    });
+  }
+
+  function showTabContent(i) {
+    console.log(content[i]);
+  }
+
+  hideTabContent();
+  showTabContent(0);
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (tabs);
 
 /***/ }),
 

@@ -1,23 +1,29 @@
-const tabs = (allSelector, boxSelector, contentSelector, activeSelector) => {
+const tabs = (allBtnSelector, cityBtnSelector, citySelector, activeSelector) => {
     
-    const all = document.querySelector(allSelector);
-    const box = document.querySelectorAll(boxSelector);
-    const content = document.querySelectorAll(contentSelector);
+    const allBtn = document.querySelector(allBtnSelector);
+    const cityBtn = document.querySelectorAll(cityBtnSelector);
+    const city = document.querySelectorAll(citySelector);
 
-
-    function hideTabContent (){
-        content.forEach(item => {
-            item.style.display = none;
+    function hideCity (){
+        city.forEach((item) => {
+            item.style.display = 'none';
         })
     }
 
-    function showTabContent (i){
-        console.log(content[i])
+    function showTabContent (i = 0){
+        city[i].style.display = 'block';
     }
+ 
 
+    
+    cityBtn.forEach((item, i) =>{
+       
+    })
+    
 
-    hideTabContent();
-    showTabContent(0);
+    hideCity();
+    showTabContent();
+
 };
 
 export default tabs;

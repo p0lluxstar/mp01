@@ -14881,7 +14881,7 @@ __webpack_require__.r(__webpack_exports__);
 window.addEventListener('DOMContentLoaded', function () {
   //этот обработчик отвечает за то, что скрипты начинают выполнятся когда DOM дерево будет готова
   Object(_modules_callback__WEBPACK_IMPORTED_MODULE_1__["default"])();
-  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs', '.box_tabs', '.content_tabs');
+  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs', '.city_btn_tabs', '.city');
 });
 
 /***/ }),
@@ -14982,23 +14982,25 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__);
 
 
-var tabs = function tabs(allSelector, boxSelector, contentSelector, activeSelector) {
-  var all = document.querySelector(allSelector);
-  var box = document.querySelectorAll(boxSelector);
-  var content = document.querySelectorAll(contentSelector);
+var tabs = function tabs(allBtnSelector, cityBtnSelector, citySelector, activeSelector) {
+  var allBtn = document.querySelector(allBtnSelector);
+  var cityBtn = document.querySelectorAll(cityBtnSelector);
+  var city = document.querySelectorAll(citySelector);
 
-  function hideTabContent() {
-    content.forEach(function (item) {
-      item.style.display = none;
+  function hideCity() {
+    city.forEach(function (item) {
+      item.style.display = 'none';
     });
   }
 
-  function showTabContent(i) {
-    console.log(content[i]);
+  function showTabContent() {
+    var i = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+    city[i].style.display = 'block';
   }
 
-  hideTabContent();
-  showTabContent(0);
+  cityBtn.forEach(function (item, i) {});
+  hideCity();
+  showTabContent();
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (tabs);

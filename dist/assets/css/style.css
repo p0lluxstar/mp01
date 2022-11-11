@@ -140,7 +140,7 @@ form p{
     box-shadow: 1px 1px 0 red inset, -1px -1px 0 red inset;
 }
 
-.box_tabs{
+.city_btn_tabs{
     margin: 5px;
 	padding: 10px 20px;
 	display: inline-block;
@@ -154,6 +154,9 @@ form p{
     font-size: 3em;
 }
 
+.city{
+    overflow: hidden;
+}
 .img_city{
     float: left;
 }

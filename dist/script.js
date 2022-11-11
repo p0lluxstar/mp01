@@ -14881,7 +14881,7 @@ __webpack_require__.r(__webpack_exports__);
 window.addEventListener('DOMContentLoaded', function () {
   //этот обработчик отвечает за то, что скрипты начинают выполнятся когда DOM дерево будет готова
   Object(_modules_callback__WEBPACK_IMPORTED_MODULE_1__["default"])();
-  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs', '.city_btn_tabs', '.city');
+  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs', '.city_btn_tabs', '.city', '.active');
 });
 
 /***/ }),
@@ -14986,21 +14986,39 @@ var tabs = function tabs(allBtnSelector, cityBtnSelector, citySelector, activeSe
   var allBtn = document.querySelector(allBtnSelector);
   var cityBtn = document.querySelectorAll(cityBtnSelector);
   var city = document.querySelectorAll(citySelector);
+  var active = document.querySelector(activeSelector);
 
   function hideCity() {
     city.forEach(function (item) {
+      // убирает по умолчанию все города
       item.style.display = 'none';
     });
   }
 
   function showTabContent() {
     var i = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+    //покаывает по умолчанию первый город
     city[i].style.display = 'block';
   }
 
-  cityBtn.forEach(function (item, i) {});
+  function showCity(btnSelector) {
+    btnSelector.forEach(function (item, i) {
+      //показывает нужный город 
+      item.addEventListener('click', function () {
+        if (i < allBtn.childElementCount) {
+          hideCity();
+          city[i].style.display = 'block';
+        }
+
+        ;
+      });
+    });
+  }
+
+  ;
   hideCity();
   showTabContent();
+  showCity(cityBtn);
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (tabs);

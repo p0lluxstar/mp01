@@ -59,8 +59,6 @@ const callback = () => {
 
     }
 
-    
-
     bindModal('.btn_header', '.popup', '.popup_close');
     bindModal('.link_feedback', '.popup', '.popup_close');
     /* showModalByTime('.popup', 2000); */

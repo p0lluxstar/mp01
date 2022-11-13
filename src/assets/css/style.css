@@ -144,7 +144,8 @@ form p{
     margin: 5px;
 	padding: 10px 20px;
 	display: inline-block;
-	border: 1px solid #000;
+	border: 1px solid rgb(167, 167, 167);
+    border-radius: 3px;
 	box-sizing: border-box;
     width: 20%;
 }
@@ -166,4 +167,8 @@ form p{
     line-height: 1.5em;
     font-weight: bold;
     padding-left: 15px;
+}
+
+.active{
+    background: #ccc;
 }

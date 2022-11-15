@@ -32,26 +32,6 @@ const callback = () => {
         })
     }
 
-    function checkInputValue(controlInput, selectorBtn){ // функция которая проверяет все поля формы на заполняемость
-        const valueInput = document.querySelectorAll(controlInput);
-        const btnInput = document.querySelector(selectorBtn);
-
-        btnInput.addEventListener('click', function(e){
-            if(e.target){
-                e.preventDefault();
-            }
-
-            for(let i = 0; i < valueInput.length; i++){
-                if(valueInput[i].value == ''){
-                    valueInput[i].classList.add('error');
-                } else {
-                    valueInput[i].classList.remove('error');
-                }
-            } 
-
-        })
-    };
-
     function showModalByTime(selector, time){ // фунция автоматического появления формы через заданное время
         setTimeout(function(){
             document.querySelector(selector).style.display = 'block';
@@ -62,7 +42,7 @@ const callback = () => {
     bindModal('.btn_header', '.popup', '.popup_close');
     bindModal('.link_feedback', '.popup', '.popup_close');
     /* showModalByTime('.popup', 2000); */
-    checkInputValue('.control_input', '.form_button')
+    
 
 };
 

@@ -42,15 +42,15 @@ const forms = () =>{
         item.addEventListener('submit', (e) => { //submit означает срабатывание события при отравки формы
             e.preventDefault();
 
-            let sumEmptySting = 0;
+/*             let sumEmptySting = 0;
 
             inputs.forEach(items => { // функция считает сколько не заполненных инпутов
                 if ( items.value == ''){
                    sumEmptySting ++;
                 } 
-            })
+            }) */
 
-            if ( sumEmptySting > 0){
+/*             if ( sumEmptySting > 0){
                 for(let i = 0; i < valueInput.length; i++){ // цикл который проверяет все поля формы на заполняемость
                     if(valueInput[i].value == ''){
                         valueInput[i].classList.add('error');
@@ -59,28 +59,31 @@ const forms = () =>{
                     }
                 }  
             } else {
-                let statusMessage = document.createElement('div');
-                statusMessage.classList.add('status');
-                item.appendChild(statusMessage);
+     
+            } */
 
-                const formData = new FormData(item);
+            let statusMessage = document.createElement('div');
+            statusMessage.classList.add('status');
+            item.appendChild(statusMessage);
 
-                postData('assets/server.php', formData)
-                .then(res => {
-                    console.log(res)
-                    statusMessage.textContent = message.success;
-                    document.querySelector('.data_forms').style.display = 'none';
-                })
+            const formData = new FormData(item);
 
-                .catch(() => statusMessage.textContent = message.failure) // метод .catch() объекта Promise добавляет обработчик или обработчики, которые будут вызваны при изменении состояния объекта Promise на rejected (выполнение отклонено).
-                .finally(() =>{  // метод .finally() объекта Promise добавляет обработчик, который будет вызван вне зависимости от того с каким результатом объект Promise был выполнен (rejected - выполнение отклонено, или fulfilled - успешное выполнение
-                    clearInputs();
-                    setTimeout(() => {
-                        statusMessage.remove();
-                        document.querySelector('.popup').style.display = 'none';
-                    }, 5000);
-                })
-            }
+            postData('assets/server.php', formData)
+            .then(res => {
+                console.log(res)
+                statusMessage.textContent = message.success;
+                document.querySelector('.data_forms').style.display = 'none';
+            })
+
+            .catch(() => statusMessage.textContent = message.failure) // метод .catch() объекта Promise добавляет обработчик или обработчики, которые будут вызваны при изменении состояния объекта Promise на rejected (выполнение отклонено).
+            .finally(() =>{  // метод .finally() объекта Promise добавляет обработчик, который будет вызван вне зависимости от того с каким результатом объект Promise был выполнен (rejected - выполнение отклонено, или fulfilled - успешное выполнение
+                clearInputs();
+                setTimeout(() => {
+                    statusMessage.remove();
+                    document.querySelector('.popup_callback').style.display = 'none';
+                }, 5000);
+            })
+
         })
     })
 

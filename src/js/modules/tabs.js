@@ -1,45 +1,46 @@
-const tabs = (allBtnSelector, cityBtnSelector, citySelector, activeSelector) => {
+const tabs = (allBtnSelector, mountBtnSelector, mountSelector, activeSelector) => {
     
     const allBtn = document.querySelector(allBtnSelector);
-    const cityBtn = document.querySelectorAll(cityBtnSelector);
-    const city = document.querySelectorAll(citySelector);
-    const active = document.querySelector(activeSelector);
+    const mountBtn = document.querySelectorAll(mountBtnSelector);
+    const mount = document.querySelectorAll(mountSelector);
 
-    function hideCity (){ // убирает по умолчанию все города
-        city.forEach((item) => { 
+    function hidemount (){ // убирает по умолчанию все города
+        mount.forEach((item) => { 
             item.style.display = 'none';
         });
     }
 
-    function showTabContent (i = 0){ //покаывает по умолчанию первый город
-        city[i].style.display = 'block';
+    function showTabContent (i = 0){ //покаывает по умолчанию первую гору
+        mount[i].style.display = 'block';
         allBtn.childNodes[i + 1].classList.add(activeSelector);
     }
 
     function delClass(){ // удаляет в элементе класс переданный в activeSelector
-        cityBtn.forEach(item => {
+        mountBtn.forEach(item => {
             item.classList.remove(activeSelector);
         });
     }
 
-    function showCity(btnSelector){ //показывает описание выбранного города 
-        btnSelector.forEach((item, i) =>{ 
+    function showmount(){ //показывает описание выбранной горы
+        mountBtn.forEach((item, i) =>{ 
+            
             item.addEventListener('click', function(){
+                console.log(i)
                 if (i < allBtn.childElementCount){
-                    hideCity ();
+                    hidemount ();
                     delClass();
-                    city[i].style.display = 'block';
+                    mount[i].style.display = 'block';
                     allBtn.children[i].classList.add(activeSelector);
                 };
             });
         });
     };
     
-   
-
-    hideCity();
+    
+    hidemount();
+    showmount();
     showTabContent();
-    showCity(cityBtn);
+    
 };
 
 export default tabs;

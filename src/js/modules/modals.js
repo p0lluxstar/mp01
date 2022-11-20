@@ -1,4 +1,4 @@
-const callback = () => {
+const modals = () => {
 
     function bindModal(triggerSelector, modalSelector, closeSelector){
 
@@ -40,11 +40,12 @@ const callback = () => {
 
     }
 
-    bindModal('.btn_header', '.popup', '.popup_close');
-    bindModal('.link_feedback', '.popup', '.popup_close');
+    bindModal('.btn_header', '.popup_callback', '.popup_close');
+    bindModal('.link_feedback', '.popup_callback', '.popup_close');
+    bindModal('.btn_calc', '.popup_calc_step1', '.popup_close_calc');
     /* showModalByTime('.popup', 2000); */
     
 
 };
 
-export default callback;
+export default modals;

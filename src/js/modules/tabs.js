@@ -25,7 +25,6 @@ const tabs = (allBtnSelector, mountBtnSelector, mountSelector, activeSelector) =
         mountBtn.forEach((item, i) =>{ 
             
             item.addEventListener('click', function(){
-                console.log(i)
                 if (i < allBtn.childElementCount){
                     hidemount ();
                     delClass();

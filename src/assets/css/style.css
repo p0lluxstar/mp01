@@ -57,7 +57,7 @@ html, body {
     color: #fff;
 }
 
-.popup_callback, .popup_calc_step1, .popup_calc_step2 {
+.popup_callback, .popup_callspec, .popup_calc_step1, .popup_calc_step2, .popup_calc_step3 {
     display: none;
     position: fixed;
     top: 0;
@@ -119,7 +119,7 @@ form p{
     font-size: 14px;
 }
 
-.popup_close, .popup_close_calc {
+.popup_close, .popup_close_callspec, .popup_close_calc, .popup_close_calc_step2, .popup_close_calc_step3 {
     position: absolute;
     top: -40px;
     right: -40px;
@@ -202,3 +202,14 @@ form p{
 .discription_calc{
     margin-bottom: 20px;
 }
+
+.popup_calc_step2 h3{
+    margin-bottom: 20px;
+}
+
+
+.level, .kids { 
+    margin: 0 auto;
+    text-align: center;
+    margin-bottom: 20px;
+} 

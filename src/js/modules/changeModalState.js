@@ -1,17 +1,27 @@
 const changeModalState = (state) => {
 
     const mount = document.querySelectorAll('.mount_icons_calc');
-    const date = document.querySelector('#date_from');
-    const dateTo = document.querySelector('#date_to');
-    const level = document.querySelector('.form_level');
+    const dateWith = document.querySelectorAll('#date_with');
+    const dateTo = document.querySelectorAll('#date_to');
+    const level = document.querySelectorAll('.form_level');
     const kids = document.querySelectorAll('.checkbox');
 
-    mount.forEach((item, i) => {
-        item.addEventListener('click', () => {
-            state.form = i;
-            console.log(state)
-        })
-    })
+    function bindActionToElems (event, elem, prop){ //функция которая собриает информацию из модульных окон и записывает это в объект state
+        elem.forEach((item, i) => {
+            item.addEventListener(event, () =>{
+                if (elem.length > 1) {
+                    state[prop] = i;
+                } else {
+                    state[prop] = item.value
+                }
+                console.log(state)
+            })
+        }
+    )}
+
+    bindActionToElems('click', mount, 'from')
+    bindActionToElems('input', dateWith, 'dateWith')
+    bindActionToElems('input', dateTo, 'dateTo')
 
 }
 

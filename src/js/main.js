@@ -12,6 +12,6 @@ window.addEventListener('DOMContentLoaded', () => { //этот обработч�
     modals(); //функци которая позволяет отоброжать модальные окна
     tabs( '.all_tabs_mounts', '.mount_btn_tabs', '.mount', 'active'); // функция работы табов гор
     tabs( '.all_tabs_mounts_calc', '.mount_icons_calc', '.discription_calc', 'active_calc'); // функция работы табов гор в калькуляторе
-    forms();
+    forms(modalState);
     changeModalState(modalState);
 });

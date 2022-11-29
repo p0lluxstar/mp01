@@ -9,19 +9,37 @@ const changeModalState = (state) => {
     function bindActionToElems (event, elem, prop){ //функция которая собриает информацию из модульных окон и записывает это в объект state
         elem.forEach((item, i) => {
             item.addEventListener(event, () =>{
-                if (elem.length > 1) {
-                    state[prop] = i;
-                } else {
-                    state[prop] = item.value
+                switch(item.nodeName){
+                    case 'DIV' :
+                        state[prop] = i;
+                    break;
+                    case 'INPUT' :
+                        if (item.getAttribute('type') === 'date'){
+                            state[prop] = item.value;
+                        } else {
+                            i === 0 ? state[prop] = 'Без детей' : state[prop] = 'С детьми';
+                            elem.forEach((box, j) => {
+                                box.checked = false;
+                                if (i == j){
+                                    box.checked = true;
+                                }
+                            })
+                        }
+                    break;
+                    case 'SELECT' :
+                        state[prop] = item.value;
+                    break;
                 }
-                console.log(state)
+                console.log(state);
             })
         }
     )}
 
-    bindActionToElems('click', mount, 'from')
+    bindActionToElems('click', mount, 'mount')
     bindActionToElems('input', dateWith, 'dateWith')
     bindActionToElems('input', dateTo, 'dateTo')
+    bindActionToElems('change', level, 'level')
+    bindActionToElems('change', kids, 'kids')
 
 }
 

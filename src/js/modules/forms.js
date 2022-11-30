@@ -4,6 +4,10 @@ const forms = (state) =>{
     const inputs = document.querySelectorAll('input');
     const checkPhone = document.querySelectorAll('input[name="user_phone"]');
     const valueInput = document.querySelectorAll('.control_input');
+    const formDataModal = document.querySelectorAll('[data-modal]');
+
+/*  const mount = document.querySelectorAll('.mount_icons_calc');
+    const disr = document.querySelectorAll('.discription_calc'); */
 
 
     checkPhone.forEach(item => { // функция проверка ввода номера телефона, если вводится не цифра то ничего не будет прописываться
@@ -70,7 +74,17 @@ const forms = (state) =>{
             if (item.getAttribute('data-calc') === 'end'){
                 for (let key in state){
                     formData.append(key, state[key]);
-                }
+                }    
+                
+/*                 for ( let i = 0; i < mount.length; i++){
+                    if (i > 0){
+                        mount[i].classList.remove('active_calc');
+                        disr[i].style.display = 'none';
+                    } else {
+                        mount[i].classList.add('active_calc');
+                        disr[i].style.display = 'block';
+                    }
+                } */
             }
 
             postData('assets/server.php', formData)
@@ -90,6 +104,7 @@ const forms = (state) =>{
             })
 
         })
+
     })
 
 }

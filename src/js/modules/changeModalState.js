@@ -33,6 +33,7 @@ const changeModalState = (state) => {
                 console.log(state);
             })
         }
+        
     )}
 
     bindActionToElems('click', mount, 'mount')

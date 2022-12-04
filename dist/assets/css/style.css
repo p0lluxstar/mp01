@@ -57,7 +57,7 @@ html, body {
     color: #fff;
 }
 
-.popup {
+.popup_callback, .popup_callspec, .popup_calc_step1, .popup_calc_step2, .popup_calc_step3 {
     display: none;
     position: fixed;
     top: 0;
@@ -68,7 +68,7 @@ html, body {
     background-color: rgba(0, 0, 0, 0.5);
 }
 
-.popup_form{
+.popup_form, .popup_form_calc{
         position: fixed;
         top: 10%;
         left: 50%;
@@ -79,6 +79,11 @@ html, body {
         padding: 20px 50px;
         border-radius: 5px;
 }
+
+.popup_form_calc{
+    width: 500px;
+}
+
 
 .form{
     text-align: center;
@@ -114,7 +119,7 @@ form p{
     font-size: 14px;
 }
 
-.popup_close {
+.popup_close, .popup_close_callspec, .popup_close_calc, .popup_close_calc_step2, .popup_close_calc_step3 {
     position: absolute;
     top: -40px;
     right: -40px;
@@ -160,15 +165,51 @@ form p{
 }
 .img_mount{
     float: left;
+    margin-right: 15px;
 }
 
-.text_mount{
+.mount_icons_calc{
+    width: 25%;
     float: left;
-    line-height: 1.5em;
+    font-size: 18px;
     font-weight: bold;
-    padding-left: 15px;
+    margin: 20px 0px;
+    line-height: 18px;
+}
+
+.height_mount, .description_mount, .name_mount{
+    text-align: left;
+    line-height: 1.5em;
+}
+
+.description_mount{
+    font-size: 18px;
 }
 
 .active{
     background: #ccc;
 }
+
+.data_calc{
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.active_calc{
+    color: blue;
+}
+
+.discription_calc{
+    margin-bottom: 20px;
+}
+
+.popup_calc_step2 h3{
+    margin-bottom: 20px;
+}
+
+
+.level, .kids { 
+    margin: 0 auto;
+    text-align: center;
+    margin-bottom: 20px;
+} 

@@ -102,6 +102,26 @@ module.exports = function (it) {
 
 /***/ }),
 
+/***/ "./node_modules/core-js/internals/advance-string-index.js":
+/*!****************************************************************!*\
+  !*** ./node_modules/core-js/internals/advance-string-index.js ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var charAt = __webpack_require__(/*! ../internals/string-multibyte */ "./node_modules/core-js/internals/string-multibyte.js").charAt;
+
+// `AdvanceStringIndex` abstract operation
+// https://tc39.github.io/ecma262/#sec-advancestringindex
+module.exports = function (S, index, unicode) {
+  return index + (unicode ? charAt(S, index).length : 1);
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/core-js/internals/an-instance.js":
 /*!*******************************************************!*\
   !*** ./node_modules/core-js/internals/an-instance.js ***!
@@ -715,6 +735,118 @@ module.exports = function (exec) {
     return !!exec();
   } catch (error) {
     return true;
+  }
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/internals/fix-regexp-well-known-symbol-logic.js":
+/*!******************************************************************************!*\
+  !*** ./node_modules/core-js/internals/fix-regexp-well-known-symbol-logic.js ***!
+  \******************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var createNonEnumerableProperty = __webpack_require__(/*! ../internals/create-non-enumerable-property */ "./node_modules/core-js/internals/create-non-enumerable-property.js");
+var redefine = __webpack_require__(/*! ../internals/redefine */ "./node_modules/core-js/internals/redefine.js");
+var fails = __webpack_require__(/*! ../internals/fails */ "./node_modules/core-js/internals/fails.js");
+var wellKnownSymbol = __webpack_require__(/*! ../internals/well-known-symbol */ "./node_modules/core-js/internals/well-known-symbol.js");
+var regexpExec = __webpack_require__(/*! ../internals/regexp-exec */ "./node_modules/core-js/internals/regexp-exec.js");
+
+var SPECIES = wellKnownSymbol('species');
+
+var REPLACE_SUPPORTS_NAMED_GROUPS = !fails(function () {
+  // #replace needs built-in support for named groups.
+  // #match works fine because it just return the exec results, even if it has
+  // a "grops" property.
+  var re = /./;
+  re.exec = function () {
+    var result = [];
+    result.groups = { a: '7' };
+    return result;
+  };
+  return ''.replace(re, '$<a>') !== '7';
+});
+
+// Chrome 51 has a buggy "split" implementation when RegExp#exec !== nativeExec
+// Weex JS has frozen built-in prototypes, so use try / catch wrapper
+var SPLIT_WORKS_WITH_OVERWRITTEN_EXEC = !fails(function () {
+  var re = /(?:)/;
+  var originalExec = re.exec;
+  re.exec = function () { return originalExec.apply(this, arguments); };
+  var result = 'ab'.split(re);
+  return result.length !== 2 || result[0] !== 'a' || result[1] !== 'b';
+});
+
+module.exports = function (KEY, length, exec, sham) {
+  var SYMBOL = wellKnownSymbol(KEY);
+
+  var DELEGATES_TO_SYMBOL = !fails(function () {
+    // String methods call symbol-named RegEp methods
+    var O = {};
+    O[SYMBOL] = function () { return 7; };
+    return ''[KEY](O) != 7;
+  });
+
+  var DELEGATES_TO_EXEC = DELEGATES_TO_SYMBOL && !fails(function () {
+    // Symbol-named RegExp methods call .exec
+    var execCalled = false;
+    var re = /a/;
+
+    if (KEY === 'split') {
+      // We can't use real regex here since it causes deoptimization
+      // and serious performance degradation in V8
+      // https://github.com/zloirock/core-js/issues/306
+      re = {};
+      // RegExp[@@split] doesn't call the regex's exec method, but first creates
+      // a new one. We need to return the patched regex when creating the new one.
+      re.constructor = {};
+      re.constructor[SPECIES] = function () { return re; };
+      re.flags = '';
+      re[SYMBOL] = /./[SYMBOL];
+    }
+
+    re.exec = function () { execCalled = true; return null; };
+
+    re[SYMBOL]('');
+    return !execCalled;
+  });
+
+  if (
+    !DELEGATES_TO_SYMBOL ||
+    !DELEGATES_TO_EXEC ||
+    (KEY === 'replace' && !REPLACE_SUPPORTS_NAMED_GROUPS) ||
+    (KEY === 'split' && !SPLIT_WORKS_WITH_OVERWRITTEN_EXEC)
+  ) {
+    var nativeRegExpMethod = /./[SYMBOL];
+    var methods = exec(SYMBOL, ''[KEY], function (nativeMethod, regexp, str, arg2, forceStringMethod) {
+      if (regexp.exec === regexpExec) {
+        if (DELEGATES_TO_SYMBOL && !forceStringMethod) {
+          // The native String method already delegates to @@method (this
+          // polyfilled function), leasing to infinite recursion.
+          // We avoid it by directly calling the native @@method method.
+          return { done: true, value: nativeRegExpMethod.call(regexp, str, arg2) };
+        }
+        return { done: true, value: nativeMethod.call(str, regexp, arg2) };
+      }
+      return { done: false };
+    });
+    var stringMethod = methods[0];
+    var regexMethod = methods[1];
+
+    redefine(String.prototype, KEY, stringMethod);
+    redefine(RegExp.prototype, SYMBOL, length == 2
+      // 21.2.5.8 RegExp.prototype[@@replace](string, replaceValue)
+      // 21.2.5.11 RegExp.prototype[@@split](string, limit)
+      ? function (string, arg) { return regexMethod.call(string, this, arg); }
+      // 21.2.5.6 RegExp.prototype[@@match](string)
+      // 21.2.5.9 RegExp.prototype[@@search](string)
+      : function (string) { return regexMethod.call(string, this); }
+    );
+    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
   }
 };
 
@@ -1638,6 +1770,133 @@ shared('inspectSource', function (it) {
 
 /***/ }),
 
+/***/ "./node_modules/core-js/internals/regexp-exec-abstract.js":
+/*!****************************************************************!*\
+  !*** ./node_modules/core-js/internals/regexp-exec-abstract.js ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var classof = __webpack_require__(/*! ./classof-raw */ "./node_modules/core-js/internals/classof-raw.js");
+var regexpExec = __webpack_require__(/*! ./regexp-exec */ "./node_modules/core-js/internals/regexp-exec.js");
+
+// `RegExpExec` abstract operation
+// https://tc39.github.io/ecma262/#sec-regexpexec
+module.exports = function (R, S) {
+  var exec = R.exec;
+  if (typeof exec === 'function') {
+    var result = exec.call(R, S);
+    if (typeof result !== 'object') {
+      throw TypeError('RegExp exec method returned something other than an Object or null');
+    }
+    return result;
+  }
+
+  if (classof(R) !== 'RegExp') {
+    throw TypeError('RegExp#exec called on incompatible receiver');
+  }
+
+  return regexpExec.call(R, S);
+};
+
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/internals/regexp-exec.js":
+/*!*******************************************************!*\
+  !*** ./node_modules/core-js/internals/regexp-exec.js ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var regexpFlags = __webpack_require__(/*! ./regexp-flags */ "./node_modules/core-js/internals/regexp-flags.js");
+
+var nativeExec = RegExp.prototype.exec;
+// This always refers to the native implementation, because the
+// String#replace polyfill uses ./fix-regexp-well-known-symbol-logic.js,
+// which loads this file before patching the method.
+var nativeReplace = String.prototype.replace;
+
+var patchedExec = nativeExec;
+
+var UPDATES_LAST_INDEX_WRONG = (function () {
+  var re1 = /a/;
+  var re2 = /b*/g;
+  nativeExec.call(re1, 'a');
+  nativeExec.call(re2, 'a');
+  return re1.lastIndex !== 0 || re2.lastIndex !== 0;
+})();
+
+// nonparticipating capturing group, copied from es5-shim's String#split patch.
+var NPCG_INCLUDED = /()??/.exec('')[1] !== undefined;
+
+var PATCH = UPDATES_LAST_INDEX_WRONG || NPCG_INCLUDED;
+
+if (PATCH) {
+  patchedExec = function exec(str) {
+    var re = this;
+    var lastIndex, reCopy, match, i;
+
+    if (NPCG_INCLUDED) {
+      reCopy = new RegExp('^' + re.source + '$(?!\\s)', regexpFlags.call(re));
+    }
+    if (UPDATES_LAST_INDEX_WRONG) lastIndex = re.lastIndex;
+
+    match = nativeExec.call(re, str);
+
+    if (UPDATES_LAST_INDEX_WRONG && match) {
+      re.lastIndex = re.global ? match.index + match[0].length : lastIndex;
+    }
+    if (NPCG_INCLUDED && match && match.length > 1) {
+      // Fix browsers whose `exec` methods don't consistently return `undefined`
+      // for NPCG, like IE8. NOTE: This doesn' work for /(.?)?/
+      nativeReplace.call(match[0], reCopy, function () {
+        for (i = 1; i < arguments.length - 2; i++) {
+          if (arguments[i] === undefined) match[i] = undefined;
+        }
+      });
+    }
+
+    return match;
+  };
+}
+
+module.exports = patchedExec;
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/internals/regexp-flags.js":
+/*!********************************************************!*\
+  !*** ./node_modules/core-js/internals/regexp-flags.js ***!
+  \********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var anObject = __webpack_require__(/*! ../internals/an-object */ "./node_modules/core-js/internals/an-object.js");
+
+// `RegExp.prototype.flags` getter implementation
+// https://tc39.github.io/ecma262/#sec-get-regexp.prototype.flags
+module.exports = function () {
+  var that = anObject(this);
+  var result = '';
+  if (that.global) result += 'g';
+  if (that.ignoreCase) result += 'i';
+  if (that.multiline) result += 'm';
+  if (that.dotAll) result += 's';
+  if (that.unicode) result += 'u';
+  if (that.sticky) result += 'y';
+  return result;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/core-js/internals/require-object-coercible.js":
 /*!********************************************************************!*\
   !*** ./node_modules/core-js/internals/require-object-coercible.js ***!
@@ -1828,6 +2087,44 @@ module.exports = function (O, defaultConstructor) {
   var C = anObject(O).constructor;
   var S;
   return C === undefined || (S = anObject(C)[SPECIES]) == undefined ? defaultConstructor : aFunction(S);
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/internals/string-multibyte.js":
+/*!************************************************************!*\
+  !*** ./node_modules/core-js/internals/string-multibyte.js ***!
+  \************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var toInteger = __webpack_require__(/*! ../internals/to-integer */ "./node_modules/core-js/internals/to-integer.js");
+var requireObjectCoercible = __webpack_require__(/*! ../internals/require-object-coercible */ "./node_modules/core-js/internals/require-object-coercible.js");
+
+// `String.prototype.{ codePointAt, at }` methods implementation
+var createMethod = function (CONVERT_TO_STRING) {
+  return function ($this, pos) {
+    var S = String(requireObjectCoercible($this));
+    var position = toInteger(pos);
+    var size = S.length;
+    var first, second;
+    if (position < 0 || position >= size) return CONVERT_TO_STRING ? '' : undefined;
+    first = S.charCodeAt(position);
+    return first < 0xD800 || first > 0xDBFF || position + 1 === size
+      || (second = S.charCodeAt(position + 1)) < 0xDC00 || second > 0xDFFF
+        ? CONVERT_TO_STRING ? S.charAt(position) : first
+        : CONVERT_TO_STRING ? S.slice(position, position + 2) : (first - 0xD800 << 10) + (second - 0xDC00) + 0x10000;
+  };
+};
+
+module.exports = {
+  // `String.prototype.codePointAt` method
+  // https://tc39.github.io/ecma262/#sec-string.prototype.codepointat
+  codeAt: createMethod(false),
+  // `String.prototype.at` method
+  // https://github.com/mathiasbynens/String.prototype.at
+  charAt: createMethod(true)
 };
 
 
@@ -2643,6 +2940,144 @@ $({ target: PROMISE, stat: true, forced: INCORRECT_ITERATION }, {
     });
     if (result.error) reject(result.value);
     return capability.promise;
+  }
+});
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/modules/es.string.replace.js":
+/*!***********************************************************!*\
+  !*** ./node_modules/core-js/modules/es.string.replace.js ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var fixRegExpWellKnownSymbolLogic = __webpack_require__(/*! ../internals/fix-regexp-well-known-symbol-logic */ "./node_modules/core-js/internals/fix-regexp-well-known-symbol-logic.js");
+var anObject = __webpack_require__(/*! ../internals/an-object */ "./node_modules/core-js/internals/an-object.js");
+var toObject = __webpack_require__(/*! ../internals/to-object */ "./node_modules/core-js/internals/to-object.js");
+var toLength = __webpack_require__(/*! ../internals/to-length */ "./node_modules/core-js/internals/to-length.js");
+var toInteger = __webpack_require__(/*! ../internals/to-integer */ "./node_modules/core-js/internals/to-integer.js");
+var requireObjectCoercible = __webpack_require__(/*! ../internals/require-object-coercible */ "./node_modules/core-js/internals/require-object-coercible.js");
+var advanceStringIndex = __webpack_require__(/*! ../internals/advance-string-index */ "./node_modules/core-js/internals/advance-string-index.js");
+var regExpExec = __webpack_require__(/*! ../internals/regexp-exec-abstract */ "./node_modules/core-js/internals/regexp-exec-abstract.js");
+
+var max = Math.max;
+var min = Math.min;
+var floor = Math.floor;
+var SUBSTITUTION_SYMBOLS = /\$([$&'`]|\d\d?|<[^>]*>)/g;
+var SUBSTITUTION_SYMBOLS_NO_NAMED = /\$([$&'`]|\d\d?)/g;
+
+var maybeToString = function (it) {
+  return it === undefined ? it : String(it);
+};
+
+// @@replace logic
+fixRegExpWellKnownSymbolLogic('replace', 2, function (REPLACE, nativeReplace, maybeCallNative) {
+  return [
+    // `String.prototype.replace` method
+    // https://tc39.github.io/ecma262/#sec-string.prototype.replace
+    function replace(searchValue, replaceValue) {
+      var O = requireObjectCoercible(this);
+      var replacer = searchValue == undefined ? undefined : searchValue[REPLACE];
+      return replacer !== undefined
+        ? replacer.call(searchValue, O, replaceValue)
+        : nativeReplace.call(String(O), searchValue, replaceValue);
+    },
+    // `RegExp.prototype[@@replace]` method
+    // https://tc39.github.io/ecma262/#sec-regexp.prototype-@@replace
+    function (regexp, replaceValue) {
+      var res = maybeCallNative(nativeReplace, regexp, this, replaceValue);
+      if (res.done) return res.value;
+
+      var rx = anObject(regexp);
+      var S = String(this);
+
+      var functionalReplace = typeof replaceValue === 'function';
+      if (!functionalReplace) replaceValue = String(replaceValue);
+
+      var global = rx.global;
+      if (global) {
+        var fullUnicode = rx.unicode;
+        rx.lastIndex = 0;
+      }
+      var results = [];
+      while (true) {
+        var result = regExpExec(rx, S);
+        if (result === null) break;
+
+        results.push(result);
+        if (!global) break;
+
+        var matchStr = String(result[0]);
+        if (matchStr === '') rx.lastIndex = advanceStringIndex(S, toLength(rx.lastIndex), fullUnicode);
+      }
+
+      var accumulatedResult = '';
+      var nextSourcePosition = 0;
+      for (var i = 0; i < results.length; i++) {
+        result = results[i];
+
+        var matched = String(result[0]);
+        var position = max(min(toInteger(result.index), S.length), 0);
+        var captures = [];
+        // NOTE: This is equivalent to
+        //   captures = result.slice(1).map(maybeToString)
+        // but for some reason `nativeSlice.call(result, 1, result.length)` (called in
+        // the slice polyfill when slicing native arrays) "doesn't work" in safari 9 and
+        // causes a crash (https://pastebin.com/N21QzeQA) when trying to debug it.
+        for (var j = 1; j < result.length; j++) captures.push(maybeToString(result[j]));
+        var namedCaptures = result.groups;
+        if (functionalReplace) {
+          var replacerArgs = [matched].concat(captures, position, S);
+          if (namedCaptures !== undefined) replacerArgs.push(namedCaptures);
+          var replacement = String(replaceValue.apply(undefined, replacerArgs));
+        } else {
+          replacement = getSubstitution(matched, S, position, captures, namedCaptures, replaceValue);
+        }
+        if (position >= nextSourcePosition) {
+          accumulatedResult += S.slice(nextSourcePosition, position) + replacement;
+          nextSourcePosition = position + matched.length;
+        }
+      }
+      return accumulatedResult + S.slice(nextSourcePosition);
+    }
+  ];
+
+  // https://tc39.github.io/ecma262/#sec-getsubstitution
+  function getSubstitution(matched, str, position, captures, namedCaptures, replacement) {
+    var tailPos = position + matched.length;
+    var m = captures.length;
+    var symbols = SUBSTITUTION_SYMBOLS_NO_NAMED;
+    if (namedCaptures !== undefined) {
+      namedCaptures = toObject(namedCaptures);
+      symbols = SUBSTITUTION_SYMBOLS;
+    }
+    return nativeReplace.call(replacement, symbols, function (match, ch) {
+      var capture;
+      switch (ch.charAt(0)) {
+        case '$': return '$';
+        case '&': return matched;
+        case '`': return str.slice(0, position);
+        case "'": return str.slice(tailPos);
+        case '<':
+          capture = namedCaptures[ch.slice(1, -1)];
+          break;
+        default: // \d\d?
+          var n = +ch;
+          if (n === 0) return match;
+          if (n > m) {
+            var f = floor(n / 10);
+            if (f === 0) return match;
+            if (f <= m) return captures[f - 1] === undefined ? ch.charAt(1) : captures[f - 1] + ch.charAt(1);
+            return match;
+          }
+          capture = captures[n - 1];
+      }
+      return capture === undefined ? '' : capture;
+    });
   }
 });
 
@@ -17396,28 +17831,40 @@ module.exports = g;
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _slider__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./slider */ "./src/js/slider.js");
-/* harmony import */ var _modules_callback__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./modules/callback */ "./src/js/modules/callback.js");
+/* harmony import */ var _modules_modals__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./modules/modals */ "./src/js/modules/modals.js");
 /* harmony import */ var _modules_tabs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./modules/tabs */ "./src/js/modules/tabs.js");
 /* harmony import */ var _modules_forms__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./modules/forms */ "./src/js/modules/forms.js");
+/* harmony import */ var _modules_changeModalState__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./modules/changeModalState */ "./src/js/modules/changeModalState.js");
+/* harmony import */ var _modules_timer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./modules/timer */ "./src/js/modules/timer.js");
+
+
 
 
 
 
 window.addEventListener('DOMContentLoaded', function () {
   //этот обработчик отвечает за то, что скрипты начинают выполнятся когда DOM дерево будет готова
+  'use strict';
 
-  /*  'use strict'; */
-  Object(_modules_callback__WEBPACK_IMPORTED_MODULE_1__["default"])();
-  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs', '.city_btn_tabs', '.city', 'active');
-  Object(_modules_forms__WEBPACK_IMPORTED_MODULE_3__["default"])();
+  var modalState = {};
+  var deadline = '2022-12-31';
+  Object(_modules_modals__WEBPACK_IMPORTED_MODULE_1__["default"])(); //функци которая позволяет отоброжать модальные окна
+
+  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs_mounts', '.mount_btn_tabs', '.mount', 'active'); // функция работы табов гор
+
+  Object(_modules_tabs__WEBPACK_IMPORTED_MODULE_2__["default"])('.all_tabs_mounts_calc', '.mount_icons_calc', '.discription_calc', 'active_calc'); // функция работы табов гор в калькуляторе
+
+  Object(_modules_forms__WEBPACK_IMPORTED_MODULE_3__["default"])(modalState);
+  Object(_modules_changeModalState__WEBPACK_IMPORTED_MODULE_4__["default"])(modalState);
+  Object(_modules_timer__WEBPACK_IMPORTED_MODULE_5__["default"])(deadline);
 });
 
 /***/ }),
 
-/***/ "./src/js/modules/callback.js":
-/*!************************************!*\
-  !*** ./src/js/modules/callback.js ***!
-  \************************************/
+/***/ "./src/js/modules/changeModalState.js":
+/*!********************************************!*\
+  !*** ./src/js/modules/changeModalState.js ***!
+  \********************************************/
 /*! exports provided: default */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -17427,73 +17874,56 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__);
 
 
-var callback = function callback() {
-  function bindModal(triggerSelector, modalSelector, closeSelector) {
-    var trigger = document.querySelectorAll(triggerSelector);
-    var modal = document.querySelector(modalSelector);
-    var close = document.querySelector(closeSelector);
-    trigger.forEach(function (item) {
-      item.addEventListener('click', function (e) {
-        if (e.target) {
-          // отменяет перезагрузку страницы при клике на ссылку
-          e.preventDefault();
+var changeModalState = function changeModalState(state) {
+  var mount = document.querySelectorAll('.mount_icons_calc');
+  var dateWith = document.querySelectorAll('#date_with');
+  var dateTo = document.querySelectorAll('#date_to');
+  var level = document.querySelectorAll('.form_level');
+  var kids = document.querySelectorAll('.checkbox');
+
+  function bindActionToElems(event, elem, prop) {
+    //функция которая собриает информацию из модульных окон и записывает это в объект state
+    elem.forEach(function (item, i) {
+      item.addEventListener(event, function () {
+        switch (item.nodeName) {
+          case 'DIV':
+            state[prop] = i;
+            break;
+
+          case 'INPUT':
+            if (item.getAttribute('type') === 'date') {
+              state[prop] = item.value;
+            } else {
+              i === 0 ? state[prop] = 'Без детей' : state[prop] = 'С детьми';
+              elem.forEach(function (box, j) {
+                box.checked = false;
+
+                if (i == j) {
+                  box.checked = true;
+                }
+              });
+            }
+
+            break;
+
+          case 'SELECT':
+            state[prop] = item.value;
+            break;
         }
 
-        modal.style.display = 'block';
-        document.body.classList.add('modal-open');
-        /* document.body.style.overflow = 'hidden'; */
+        console.log(state);
       });
     });
-    close.addEventListener('click', function () {
-      modal.style.display = 'none';
-      document.body.classList.remove('modal-open');
-      /* document.body.style.overflow = ''; */
-    });
-    modal.addEventListener('click', function (e) {
-      if (e.target === modal) {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        /* document.body.style.overflow = ''; */
-      }
-    });
   }
 
-  function checkInputValue(controlInput, selectorBtn) {
-    // функция которая проверяет все поля формы на заполняемость
-    var valueInput = document.querySelectorAll(controlInput);
-    var btnInput = document.querySelector(selectorBtn);
-    btnInput.addEventListener('click', function (e) {
-      if (e.target) {
-        e.preventDefault();
-      }
-
-      for (var i = 0; i < valueInput.length; i++) {
-        if (valueInput[i].value == '') {
-          valueInput[i].classList.add('error');
-        } else {
-          valueInput[i].classList.remove('error');
-        }
-      }
-    });
-  }
-
-  ;
-
-  function showModalByTime(selector, time) {
-    // фунция автоматического появления формы через заданное время
-    setTimeout(function () {
-      document.querySelector(selector).style.display = 'block';
-    }, time);
-  }
-
-  bindModal('.btn_header', '.popup', '.popup_close');
-  bindModal('.link_feedback', '.popup', '.popup_close');
-  /* showModalByTime('.popup', 2000); */
-
-  checkInputValue('.control_input', '.form_button');
+  bindActionToElems('click', mount, 'mount');
+  bindActionToElems('input', dateWith, 'dateWith');
+  bindActionToElems('input', dateTo, 'dateTo');
+  bindActionToElems('change', level, 'level');
+  bindActionToElems('change', kids, 'kids');
 };
 
-/* harmony default export */ __webpack_exports__["default"] = (callback);
+/* harmony default export */ __webpack_exports__["default"] = (changeModalState);
 
 /***/ }),
 
@@ -17512,19 +17942,34 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var core_js_modules_es_promise__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_promise__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var core_js_modules_es_promise_finally__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! core-js/modules/es.promise.finally */ "./node_modules/core-js/modules/es.promise.finally.js");
 /* harmony import */ var core_js_modules_es_promise_finally__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_promise_finally__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! core-js/modules/web.dom-collections.for-each */ "./node_modules/core-js/modules/web.dom-collections.for-each.js");
-/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! regenerator-runtime/runtime */ "./node_modules/regenerator-runtime/runtime.js");
-/* harmony import */ var regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var core_js_modules_es_string_replace__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! core-js/modules/es.string.replace */ "./node_modules/core-js/modules/es.string.replace.js");
+/* harmony import */ var core_js_modules_es_string_replace__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_string_replace__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! core-js/modules/web.dom-collections.for-each */ "./node_modules/core-js/modules/web.dom-collections.for-each.js");
+/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! regenerator-runtime/runtime */ "./node_modules/regenerator-runtime/runtime.js");
+/* harmony import */ var regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_5__);
 
 
 
 
 
 
-var forms = function forms() {
+
+var forms = function forms(state) {
   var form = document.querySelectorAll('form');
   var inputs = document.querySelectorAll('input');
+  var checkPhone = document.querySelectorAll('input[name="user_phone"]');
+  var valueInput = document.querySelectorAll('.control_input');
+  var formDataModal = document.querySelectorAll('[data-modal]');
+  /*  const mount = document.querySelectorAll('.mount_icons_calc');
+      const disr = document.querySelectorAll('.discription_calc'); */
+
+  checkPhone.forEach(function (item) {
+    // функция проверка ввода номера телефона, если вводится не цифра то ничего не будет прописываться
+    item.addEventListener('input', function () {
+      item.value = item.value.replace(/\D/, ''); // метод replace() выполняет внутри строки поиск с использованием регулярного выражения (объект RegExp), или строкового значения и возвращает новую строку, в которой будут заменены найденные значения
+    });
+  });
   var message = {
     loading: 'Загрузка...',
     success: 'Спасибо! Скоро мы с вами свяжемся',
@@ -17537,9 +17982,12 @@ var forms = function forms() {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            document.querySelector('.status').textContent = message.loading;
+            // функция для отравки запроса на сервер, url - это адреус куда будут уходить данные и data это сами данные. async говорит о том что в функции есть асинхронные операции
+            document.querySelector('.status').textContent = message.loading; // Свойство textContent позволяет считывать или задавать текстовое содержимое элемента
+
             _context.next = 3;
-            return regeneratorRuntime.awrap(fetch(utl, {
+            return regeneratorRuntime.awrap(fetch(url, {
+              // await заставит интерпретатор JavaScript ждать до тех пор, пока промис справа от await не выполнится
               method: "POST",
               body: data
             }));
@@ -17561,27 +18009,70 @@ var forms = function forms() {
   };
 
   var clearInputs = function clearInputs() {
+    // функция очищает инпуты после отравки
     inputs.forEach(function (item) {
       item.value = '';
     });
   };
 
   form.forEach(function (item) {
-    item.addEventListener('sumbit', function (e) {
+    item.addEventListener('submit', function (e) {
+      //submit означает срабатывание события при отравки формы
       e.preventDefault();
+      /*             let sumEmptySting = 0;
+      
+                  inputs.forEach(items => { // функция считает сколько не заполненных инпутов
+                      if ( items.value == ''){
+                         sumEmptySting ++;
+                      } 
+                  }) */
+
+      /*             if ( sumEmptySting > 0){
+                      for(let i = 0; i < valueInput.length; i++){ // цикл который проверяет все поля формы на заполняемость
+                          if(valueInput[i].value == ''){
+                              valueInput[i].classList.add('error');
+                          } else {
+                              valueInput[i].classList.remove('error');
+                          }
+                      }  
+                  } else {
+           
+                  } */
+
       var statusMessage = document.createElement('div');
       statusMessage.classList.add('status');
       item.appendChild(statusMessage);
       var formData = new FormData(item);
-      postData('assist/server.php', formData).then(function (res) {
+
+      if (item.getAttribute('data-calc') === 'end') {
+        for (var key in state) {
+          formData.append(key, state[key]);
+        }
+        /*                 for ( let i = 0; i < mount.length; i++){
+                            if (i > 0){
+                                mount[i].classList.remove('active_calc');
+                                disr[i].style.display = 'none';
+                            } else {
+                                mount[i].classList.add('active_calc');
+                                disr[i].style.display = 'block';
+                            }
+                        } */
+
+      }
+
+      postData('assets/server.php', formData).then(function (res) {
         console.log(res);
         statusMessage.textContent = message.success;
+        document.querySelector('.data_forms').style.display = 'none';
       }).catch(function () {
         return statusMessage.textContent = message.failure;
-      }).finally(function () {
+      }) // метод .catch() объекта Promise добавляет обработчик или обработчики, которые будут вызваны при изменении состояния объекта Promise на rejected (выполнение отклонено).
+      .finally(function () {
+        // метод .finally() объекта Promise добавляет обработчик, который будет вызван вне зависимости от того с каким результатом объект Promise был выполнен (rejected - выполнение отклонено, или fulfilled - успешное выполнение
         clearInputs();
         setTimeout(function () {
           statusMessage.remove();
+          document.querySelector('.popup_callback').style.display = 'none';
         }, 5000);
       });
     });
@@ -17589,6 +18080,83 @@ var forms = function forms() {
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (forms);
+
+/***/ }),
+
+/***/ "./src/js/modules/modals.js":
+/*!**********************************!*\
+  !*** ./src/js/modules/modals.js ***!
+  \**********************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! core-js/modules/web.dom-collections.for-each */ "./node_modules/core-js/modules/web.dom-collections.for-each.js");
+/* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__);
+
+
+var modals = function modals() {
+  function bindModal(triggerSelector, modalSelector, closeSelector) {
+    var closeClickOverlay = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+    var trigger = document.querySelectorAll(triggerSelector);
+    var modal = document.querySelector(modalSelector);
+    var close = document.querySelector(closeSelector);
+    var windows = document.querySelectorAll('[data-modal]'); // переменаня нужна что бы получить все модальные окна со страницы, это нужно будет что бы можно было закрыть все модальные окна при нажатии на подложку
+
+    trigger.forEach(function (item) {
+      item.addEventListener('click', function (e) {
+        if (e.target) {
+          // отменяет перезагрузку страницы при клике на ссылку
+          e.preventDefault();
+        }
+
+        windows.forEach(function (item) {
+          item.style.display = 'none';
+        });
+        modal.style.display = 'block';
+        document.querySelector('.data_forms').style.display = 'block';
+        document.body.classList.add('modal-open');
+        /* document.body.style.overflow = 'hidden'; */
+      });
+    });
+    close.addEventListener('click', function () {
+      // функция закрывает модальное окно при нажатии на крестик
+      windows.forEach(function (item) {
+        item.style.display = 'none';
+      });
+      modal.style.display = 'none';
+      document.body.classList.remove('modal-open');
+      /* document.body.style.overflow = ''; */
+    });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal && closeClickOverlay) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        windows.forEach(function (item) {
+          item.style.display = 'none';
+        });
+        /* document.body.style.overflow = ''; */
+      }
+    });
+  }
+
+  function showModalByTime(selector, time) {
+    // фунция автоматического появления формы через заданное время
+    setTimeout(function () {
+      document.querySelector(selector).style.display = 'block';
+    }, time);
+  }
+
+  bindModal('.btn_header', '.popup_callback', '.popup_close');
+  bindModal('.link_feedback', '.popup_callspec', '.popup_close_callspec');
+  bindModal('.btn_calc', '.popup_calc_step1', '.popup_close_calc');
+  bindModal('.popup_calc_button', '.popup_calc_step2', '.popup_close_calc_step2', false);
+  bindModal('.popup_calc_button_step2', '.popup_calc_step3', '.popup_close_calc_step3', false);
+  /* showModalByTime('.popup', 2000); */
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (modals);
 
 /***/ }),
 
@@ -17605,41 +18173,40 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_dom_collections_for_each__WEBPACK_IMPORTED_MODULE_0__);
 
 
-var tabs = function tabs(allBtnSelector, cityBtnSelector, citySelector, activeSelector) {
+var tabs = function tabs(allBtnSelector, mountBtnSelector, mountSelector, activeSelector) {
   var allBtn = document.querySelector(allBtnSelector);
-  var cityBtn = document.querySelectorAll(cityBtnSelector);
-  var city = document.querySelectorAll(citySelector);
-  var active = document.querySelector(activeSelector);
+  var mountBtn = document.querySelectorAll(mountBtnSelector);
+  var mount = document.querySelectorAll(mountSelector);
 
-  function hideCity() {
+  function hidemount() {
     // убирает по умолчанию все города
-    city.forEach(function (item) {
+    mount.forEach(function (item) {
       item.style.display = 'none';
     });
   }
 
   function showTabContent() {
     var i = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-    //покаывает по умолчанию первый город
-    city[i].style.display = 'block';
+    //покаывает по умолчанию первую гору
+    mount[i].style.display = 'block';
     allBtn.childNodes[i + 1].classList.add(activeSelector);
   }
 
   function delClass() {
     // удаляет в элементе класс переданный в activeSelector
-    cityBtn.forEach(function (item) {
+    mountBtn.forEach(function (item) {
       item.classList.remove(activeSelector);
     });
   }
 
-  function showCity(btnSelector) {
-    //показывает описание выбранного города 
-    btnSelector.forEach(function (item, i) {
+  function showmount() {
+    //показывает описание выбранной горы
+    mountBtn.forEach(function (item, i) {
       item.addEventListener('click', function () {
         if (i < allBtn.childElementCount) {
-          hideCity();
+          hidemount();
           delClass();
-          city[i].style.display = 'block';
+          mount[i].style.display = 'block';
           allBtn.children[i].classList.add(activeSelector);
         }
 
@@ -17649,12 +18216,76 @@ var tabs = function tabs(allBtnSelector, cityBtnSelector, citySelector, activeSe
   }
 
   ;
-  hideCity();
+  hidemount();
+  showmount();
   showTabContent();
-  showCity(cityBtn);
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (tabs);
+
+/***/ }),
+
+/***/ "./src/js/modules/timer.js":
+/*!*********************************!*\
+  !*** ./src/js/modules/timer.js ***!
+  \*********************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+var timer = function timer(deadline) {
+  var addZero = function addZero(num) {
+    if (num <= 9) {
+      return '0' + num;
+    } else {
+      return num;
+    }
+  };
+
+  var getTimeRemaining = function getTimeRemaining(endtime) {
+    var t = Date.parse(endtime) - Date.parse(new Date());
+    var seconds = Math.floor(t / 1000 % 60);
+    var minutes = Math.floor(t / 1000 / 60 % 60);
+    var hours = Math.floor(t / (1000 * 60 * 60) % 24);
+    var days = Math.floor(t / (1000 * 60 * 60 * 24));
+    return {
+      'total': t,
+      'days': days,
+      'hours': hours,
+      'minutes': minutes,
+      'seconds': seconds
+    };
+  };
+
+  var setClock = function setClock(endtime) {
+    var days = document.querySelector('#days');
+    var hours = document.querySelector('#hours');
+    var minutes = document.querySelector('#minutes');
+    var seconds = document.querySelector('#seconds');
+    var timeInterval = setInterval(updateClock, 1000);
+
+    function updateClock() {
+      var t = getTimeRemaining(endtime);
+      days.textContent = addZero(t.days);
+      hours.textContent = addZero(t.hours);
+      minutes.textContent = addZero(t.minutes);
+      seconds.textContent = addZero(t.seconds);
+
+      if (t.total <= 0) {
+        days.textContent = '00';
+        hours.textContent = '00';
+        minutes.textContent = '00';
+        seconds.textContent = '00';
+        clearInterval(timeInterval);
+      }
+    }
+  };
+
+  setClock(deadline);
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (timer);
 
 /***/ }),
 
